@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My 2025 AI Personal Website</title>
+    <title>My 2026 AI Personal Website</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style2.css">
@@ -17,13 +17,10 @@
            font-weight: bold;
            color: #ffd966 !important;
            margin-bottom: 0.2rem !important;
-
            display: flex;
            align-items: center;   /* 關鍵：文字垂直置中 */
         }
 
-    
-        
         .title-line:last-child {
             margin-bottom: 0 !important;
         }
@@ -32,7 +29,6 @@
 </head>
 
 <body>
-    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
             <a class="navbar-brand" href="#home">2026 AI</a>
@@ -60,7 +56,6 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
     <section id="home" class="hero">
         <div class="container">
             <div class="row align-items-center">
@@ -68,7 +63,6 @@
                     <h1 id="name"></h1>
                     <div class="titles-container">
                         <p class="subtitle title-line" id="title1"></p>
-                        <p class="subtitle title-line" id="title2"></p>
                     </div>
                     <div class="mb-3">
                         <strong>專長：</strong>
@@ -80,16 +74,16 @@
                     </div>
                     <div class="mb-3">
                         <strong>聯絡信箱：</strong>
-                        <a href="/cdn-cgi/l/email-protection#a9" class="text-white" id="email"></a>
+                        <a href="" class="text-white" id="email"></a>
                     </div>
-                   <div class="mb-3">
-    <strong>Instagram：</strong>
-    <a href="" target="_blank" class="text-white" id="instagram">
-        <i class="fab fa-instagram me-1"></i>
-        <span id="instagram-text"></span>
-        <i class="fas fa-external-link-alt ms-1"></i>
-    </a>
-</div>
+                    <div class="mb-3">
+                        <strong>Instagram：</strong>
+                        <a href="" target="_blank" class="text-white" id="instagram">
+                            <i class="fab fa-instagram me-1"></i>
+                            <span id="instagram-text"></span>
+                            <i class="fas fa-external-link-alt ms-1"></i>
+                        </a>
+                    </div>
                     <div class="mb-4 student-links">
                         <strong>2026台科大學生作品連結：</strong>
                         <div class="student-link-item">
@@ -131,7 +125,6 @@
         </div>
     </section>
 
-    <!-- About Section -->
     <section id="about" class="section">
         <div class="container">
             <h2 class="section-title">關於我</h2>
@@ -148,12 +141,10 @@
         </div>
     </section>
 
-    <!-- Projects Section -->
     <section id="projects" class="section bg-light">
         <div class="container">
             <h2 class="section-title">我的專案</h2>
 
-            <!-- Filter Buttons -->
             <div class="filter-buttons fade-in">
                 <button class="btn filter-btn active" onclick="filterProjects('all')">全部</button>
                 <button class="btn filter-btn" onclick="filterProjects('perception')">感知式AI</button>
@@ -162,14 +153,11 @@
                 <button class="btn filter-btn" onclick="filterProjects('tools')">其他工具</button>
             </div>
 
-            <!-- Projects Grid -->
             <div class="project-grid fade-in" id="projects-grid">
-                <!-- Projects will be dynamically generated -->
-            </div>
+                </div>
         </div>
     </section>
 
-    <!-- Contact Section -->
     <section id="contact" class="section">
         <div class="container">
             <h2 class="section-title">聯絡我</h2>
@@ -203,19 +191,15 @@
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <p>&copy; 2026 Dr. Pin Luarn. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        
-
         // Project data
          const projects = [
             {id: 1, category: 'tools', title: '單元 #1', description: '個人網頁建置、MediaPipe、環境 - 其他工具專案'},
@@ -256,14 +240,16 @@
         function loadProfileData() {
             // Update home section
             document.getElementById('name').textContent = profileData.name;
-            document.getElementById('title1').textContent = profileData.title1;
-            document.getElementById('title2').textContent = profileData.title2;
+            document.getElementById('title1').textContent = profileData.title; // 修正對應的鍵值
             document.getElementById('expertise').textContent = profileData.expertise;
             document.getElementById('education').textContent = profileData.education;
             document.getElementById('email').textContent = profileData.email;
             document.getElementById('email').href = `mailto:${profileData.email}`;
-            document.getElementById('linkedin').href = profileData.linkedin;
-            document.getElementById('linkedin-text').textContent = profileData.linkedin;
+            
+            // 將 LinkedIn 替換為 Instagram 並縮短顯示的文字內容以保持版面整潔
+            document.getElementById('instagram').href = profileData.Instagram;
+            document.getElementById('instagram-text').textContent = "@jimmytalks.ai"; 
+            
             const aboutText = [profileData.about1, profileData.about2, profileData.about3, profileData.about4]
                 .filter(text => text && text.trim()) // Remove empty parts
                 .join(' ');
@@ -354,7 +340,8 @@
                 navbar.style.background = 'rgba(255,255,255,0.95)';
             }
         });
-// ====== User Profile Data Section - Please modify the content below ======
+        
+        // ====== User Profile Data Section ======
         const profileData = {
             name: "丁漢勳 Jimmy",
             title: "AI重度使用者",
