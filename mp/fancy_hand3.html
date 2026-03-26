@@ -4,35 +4,29 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>忍術・チャクラ感知システム</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/addons/p5.sound.min.js"></script>
+  <title>忍術・チャクラ感知</title>
+  <!-- 去掉 p5.sound，只保留 p5 + ml5 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@1/dist/ml5.min.js"></script>
-
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&display=swap');
-
     html,
     body {
       margin: 0;
       padding: 0;
       background: #0d0600;
       overflow: hidden;
-      font-family: 'Noto Serif JP', serif;
     }
 
-    /* 滾動條裝飾邊框 */
     body::before,
     body::after {
       content: '';
       position: fixed;
       top: 0;
       bottom: 0;
-      width: 6px;
+      width: 5px;
       background: linear-gradient(to bottom, #ff6a00, #8b2500, #ff6a00);
       z-index: 3000;
-      box-shadow: 0 0 18px #ff6a00aa;
+      box-shadow: 0 0 14px #ff6a00aa;
     }
 
     body::before {
@@ -43,90 +37,49 @@
       right: 0;
     }
 
-    .nav-group {
+    .corner {
       position: fixed;
-      top: 16px;
-      left: 20px;
-      z-index: 2000;
-      display: flex;
-      gap: 10px;
-    }
-
-    .nav-btn {
-      padding: 8px 14px;
-      font-size: 0.7em;
-      border-radius: 3px;
-      text-decoration: none;
-      letter-spacing: 2px;
-      transition: all 0.3s;
-      cursor: pointer;
-      font-family: 'Noto Serif JP', serif;
-    }
-
-    #back-btn {
-      background: rgba(255, 106, 0, 0.07);
-      border: 1px solid rgba(255, 106, 0, 0.4);
-      color: #ff9a40;
-    }
-
-    #reload-btn {
-      background: rgba(180, 0, 0, 0.07);
-      border: 1px solid rgba(180, 0, 0, 0.5);
-      color: #ff4444;
-    }
-
-    .nav-btn:hover {
-      background: rgba(255, 106, 0, 0.2);
-      box-shadow: 0 0 12px #ff6a00;
-    }
-
-    /* 葉隱村符文角標 */
-    .corner-mark {
-      position: fixed;
-      font-size: 2.2em;
-      color: rgba(255, 106, 0, 0.18);
+      font-size: 1.8em;
+      color: rgba(255, 106, 0, 0.2);
       z-index: 2000;
       pointer-events: none;
-      line-height: 1;
+      font-family: serif;
     }
 
-    .corner-mark.tl {
-      top: 10px;
-      left: 24px;
+    .tl {
+      top: 8px;
+      left: 16px;
     }
 
-    .corner-mark.tr {
-      top: 10px;
-      right: 24px;
+    .tr {
+      top: 8px;
+      right: 16px;
     }
 
-    .corner-mark.bl {
-      bottom: 10px;
-      left: 24px;
+    .bl {
+      bottom: 8px;
+      left: 16px;
     }
 
-    .corner-mark.br {
-      bottom: 10px;
-      right: 24px;
+    .br {
+      bottom: 8px;
+      right: 16px;
     }
 
-    #status-log {
+    #log {
       position: fixed;
-      bottom: 14px;
-      left: 24px;
-      color: rgba(255, 140, 0, 0.55);
+      bottom: 10px;
+      left: 16px;
+      color: rgba(255, 140, 0, 0.5);
       font-size: 10px;
       z-index: 2000;
       letter-spacing: 2px;
+      font-family: monospace;
     }
 
-    /* 覆蓋層 */
     #overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: radial-gradient(ellipse at center, #1a0900 0%, #0d0600 100%);
       display: flex;
       flex-direction: column;
@@ -134,204 +87,134 @@
       align-items: center;
       z-index: 1000;
       color: #ff9a40;
+      font-family: serif;
     }
 
-    .title-kanji {
-      font-size: 3em;
-      color: #ff6a00;
-      text-shadow: 0 0 30px #ff6a00, 0 0 60px #ff3300;
-      letter-spacing: 12px;
-      margin-bottom: 4px;
-    }
-
-    .title-sub {
-      font-size: 0.85em;
-      color: rgba(255, 160, 80, 0.7);
-      letter-spacing: 6px;
-      margin-bottom: 24px;
-    }
-
-    #loading-msg {
-      margin-top: 10px;
-      font-size: 12px;
-      color: rgba(255, 160, 80, 0.6);
-      letter-spacing: 4px;
-    }
-
-    .start-btn {
-      background: transparent;
-      border: 2px solid #ff6a00;
-      color: #ff9a40;
-      padding: 12px 40px;
-      font-size: 1em;
-      cursor: pointer;
-      letter-spacing: 6px;
-      font-family: 'Noto Serif JP', serif;
-      transition: all 0.3s;
-      text-shadow: 0 0 10px #ff6a00;
-      box-shadow: 0 0 20px #ff6a0033;
-    }
-
-    .start-btn:hover {
-      background: rgba(255, 106, 0, 0.2);
-      box-shadow: 0 0 40px #ff6a00;
-    }
-
-    /* 葉隱LOGO風格圓形裝飾 */
-    .seal-ring {
-      width: 160px;
-      height: 160px;
-      border: 2px solid rgba(255, 106, 0, 0.3);
+    .ring {
+      width: 140px;
+      height: 140px;
+      border: 1.5px solid rgba(255, 106, 0, 0.3);
       border-radius: 50%;
       position: absolute;
-      animation: rotateSeal 8s linear infinite;
+      animation: spin 8s linear infinite;
     }
 
-    .seal-ring:nth-child(2) {
-      width: 200px;
-      height: 200px;
+    .ring:nth-child(2) {
+      width: 180px;
+      height: 180px;
       animation-direction: reverse;
-      animation-duration: 12s;
+      animation-duration: 11s;
       border-color: rgba(200, 60, 0, 0.2);
     }
 
-    @keyframes rotateSeal {
-      from {
-        transform: rotate(0deg);
-      }
-
+    @keyframes spin {
       to {
         transform: rotate(360deg);
       }
+    }
+
+    .ttl {
+      font-size: 2.8em;
+      color: #ff6a00;
+      text-shadow: 0 0 25px #ff6a00, 0 0 50px #ff3300;
+      letter-spacing: 10px;
+      margin-bottom: 4px;
+    }
+
+    .sub {
+      font-size: 0.75em;
+      color: rgba(255, 160, 80, 0.65);
+      letter-spacing: 5px;
+      margin-bottom: 20px;
+    }
+
+    #ldmsg {
+      font-size: 11px;
+      color: rgba(255, 160, 80, 0.55);
+      letter-spacing: 3px;
+      margin-top: 8px;
+    }
+
+    #initBtn {
+      display: none;
+      background: transparent;
+      border: 2px solid #ff6a00;
+      color: #ff9a40;
+      padding: 11px 36px;
+      font-size: 0.95em;
+      cursor: pointer;
+      letter-spacing: 5px;
+      font-family: serif;
+      transition: all 0.3s;
+      margin-top: 18px;
+    }
+
+    #initBtn:hover {
+      background: rgba(255, 106, 0, 0.18);
+      box-shadow: 0 0 30px #ff6a00;
     }
   </style>
 </head>
 
 <body>
-  <div class="nav-group">
-    <a href="../perception_demo.html" id="back-btn" class="nav-btn">葉隱HUB</a>
-    <div id="reload-btn" class="nav-btn" onclick="location.reload()">再起動</div>
-  </div>
-
-  <div class="corner-mark tl">忍</div>
-  <div class="corner-mark tr">術</div>
-  <div class="corner-mark bl">葉</div>
-  <div class="corner-mark br">隠</div>
-
-  <div id="status-log">システム待機中…</div>
+  <div class="corner tl">忍</div>
+  <div class="corner tr">術</div>
+  <div class="corner bl">葉</div>
+  <div class="corner br">隠</div>
+  <div id="log">待機中…</div>
 
   <div id="overlay">
-    <div class="seal-ring"></div>
-    <div class="seal-ring"></div>
-    <div class="title-kanji">忍術</div>
-    <div class="title-sub">CHAKRA PERCEPTION SYSTEM</div>
-    <div id="loading-msg">チャクラエンジン読み込み中…</div>
-    <button id="init-btn" class="start-btn" onclick="initSystem()" style="display:none;">印・起動</button>
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ttl">忍術</div>
+    <div class="sub">CHAKRA PERCEPTION SYSTEM</div>
+    <div id="ldmsg">チャクラエンジン読み込み中…</div>
+    <button id="initBtn" onclick="initSys()">印・起動</button>
   </div>
 
   <script>
-    // ── 火影忍者色彩系統 ──
-    const NARUTO_ORANGE = [255, 106, 0];
-    const CHAKRA_BLUE = [80, 180, 255];
-    const KYUUBI_RED = [220, 30, 30];
-    const SHARINGAN_RED = [200, 0, 0];
-    const GOLD = [255, 200, 60];
+    // ── 模式系統 ──
+    const MODES = [
+      { name: 'NARUTO', c: [255, 106, 0], c2: [255, 200, 60] },
+      { name: 'SASUKE', c: [80, 160, 255], c2: [200, 100, 255] },
+      { name: 'KYUUBI', c: [210, 30, 30], c2: [255, 180, 30] },
+    ];
+    let modeIdx = 0;
 
     let video, handPose, hands = [];
     let isReady = false;
-    let smoothedAngle = [0, 0], lastTickAngle = [0, 0];
-    let smoothedPos = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
-    let osc, envelope, linkOsc;
-    let modelCheckTimer = 0;
-    let frameParticles = [];
+    let smAngle = [0, 0], lastTick = [0, 0];
+    let smPos = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+    let modelTimer = 0;
+    let glitch = 0;
 
-    // 查克拉模式切換：橘 / 青（六道）/ 紅（九尾）
-    const modes = [
-      { name: 'NARUTO', col: [255, 106, 0], col2: [255, 200, 60] },
-      { name: 'SASUKE', col: [80, 160, 255], col2: [200, 100, 255] },
-      { name: 'KYUUBI', col: [220, 30, 30], col2: [255, 180, 30] },
+    // 按鈕
+    const btns = [
+      { lbl: '印変', tag: 'MODE', x: 40, y: 110, w: 88, h: 36, on: false },
+      { lbl: '爆発', tag: 'JUTSU', x: 40, y: 154, w: 88, h: 36, on: false },
     ];
-    let modeIdx = 0;
-    const getCol = () => color(...modes[modeIdx].col);
-    const getCol2 = () => color(...modes[modeIdx].col2);
-
-    let glitchTimer = 0;
-
-    let buttons = [
-      { label: '印変', kanji: 'CHAKRA', x: 40, y: 120, w: 90, h: 40, active: false },
-      { label: '爆発', kanji: 'JUTSU', x: 40, y: 170, w: 90, h: 40, active: false },
-    ];
-
-    // ── 落葉粒子 ──
-    class Particle {
-      constructor(x, y, col) {
-        this.x = x; this.y = y;
-        this.vx = random(-2, 2); this.vy = random(-3, -0.5);
-        this.life = 255; this.col = col;
-        this.size = random(3, 8);
-      }
-      update() { this.x += this.vx; this.y += this.vy; this.vy += 0.08; this.life -= 6; }
-      draw(pg) {
-        pg.noStroke();
-        pg.fill(...this.col, this.life);
-        pg.ellipse(this.x, this.y, this.size);
-      }
-    }
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
       angleMode(DEGREES);
-      textFont('serif');
-
-      osc = new p5.Oscillator('sawtooth');
-      envelope = new p5.Envelope();
-      envelope.setADSR(0.001, 0.08, 0.1, 0.15);
-      envelope.setRange(0.4, 0);
-      linkOsc = new p5.Oscillator('sine');
-      linkOsc.amp(0);
-
       handPose = ml5.handPose({ flipped: true, maxHands: 2 }, () => {
-        document.getElementById('loading-msg').style.display = 'none';
-        document.getElementById('init-btn').style.display = 'block';
-        updateLog("チャクラエンジン準備完了");
+        document.getElementById('ldmsg').style.display = 'none';
+        document.getElementById('initBtn').style.display = 'block';
+        log('準備完了');
       });
     }
 
-    function updateLog(msg) {
-      document.getElementById('status-log').innerText = `忍: ${msg}`;
-    }
+    function log(m) { document.getElementById('log').innerText = '忍: ' + m; }
 
-    function initSystem() {
-      userStartAudio();
-      playBootSound();
+    function initSys() {
       video = createCapture(VIDEO, () => {
         document.getElementById('overlay').style.display = 'none';
-        startDetection();
+        isReady = true;
+        log('チャクラ感知起動中…');
+        handPose.detectStart(video, r => { hands = r; modelTimer = 0; });
       });
       video.size(640, 480);
       video.hide();
-    }
-
-    function startDetection() {
-      isReady = true;
-      updateLog("チャクラ感知起動中…");
-      handPose.detectStart(video, results => {
-        hands = results;
-        modelCheckTimer = 0;
-      });
-    }
-
-    function playTone(freq) {
-      osc.freq(freq); osc.start(); envelope.play(osc);
-    }
-
-    function playBootSound() {
-      // 螺旋丸チャージ音
-      let f = 200;
-      let iv = setInterval(() => {
-        playTone(f); f += 80;
-        if (f > 1200) clearInterval(iv);
-      }, 40);
     }
 
     // ─────────────────────────────────────────
@@ -339,353 +222,226 @@
       background(13, 6, 0);
       if (!isReady) return;
 
-      modelCheckTimer++;
-      if (modelCheckTimer > 180) {
-        updateLog("チャクラ感知再起動…");
-        startDetection();
-        modelCheckTimer = 0;
-      }
+      // ハング検知
+      if (++modelTimer > 180) { modelTimer = 0; log('再起動中…'); }
 
-      // グリッチ（術発動時）
-      let gx = glitchTimer > 0 ? random(-12, 12) : 0;
-      let gy = glitchTimer > 0 ? random(-4, 4) : 0;
-      if (glitchTimer > 0) glitchTimer--;
+      // glitch
+      let gx = glitch > 0 ? random(-10, 10) : 0;
+      let gy = glitch > 0 ? random(-4, 4) : 0;
+      if (glitch > 0) glitch--;
 
-      // 半透明オレンジティントのカメラ映像
+      // カメラ（軽量：tint 1回のみ）
+      let mc = MODES[modeIdx].c;
       push();
       translate(width + gx, gy); scale(-1, 1);
-      let mc = modes[modeIdx].col;
-      tint(mc[0], mc[1], mc[2], 40);
-      image(video, 0, 0, width, height, 0, 0, video.width, video.height, COVER);
+      tint(mc[0], mc[1], mc[2], 38);
+      image(video, 0, 0, width, height, 0, 0, 640, 480, COVER);
       pop();
 
-      // 走査線（チャクラ感知）
-      drawChakraScan();
-
-      // 粒子更新
-      frameParticles = frameParticles.filter(p => p.life > 0);
-      frameParticles.forEach(p => { p.update(); p.draw(drawingContext); });
+      // 走査線（1本）
+      stroke(mc[0], mc[1], mc[2], 20);
+      strokeWeight(1);
+      line(0, (frameCount * 2) % height, width, (frameCount * 2) % height);
 
       if (hands && hands.length > 0) {
-        for (let i = 0; i < hands.length; i++) {
-          let hand = hands[i];
-          let indexTip = hand.keypoints[8];
-          let tx = map(indexTip.x, 0, 640, 0, width);
-          let ty = map(indexTip.y, 0, 480, 0, height);
-          checkButtons(tx, ty);
-          drawChakraSkeleton(hand, gx, gy);
-          drawFingertips(hand, gx, gy);
-          drawSharinganDial(hand, i, gx, gy);
-          drawRasenganCursor(tx, ty);
+        for (let h of hands) {
+          let ix = map(h.keypoints[8].x, 0, 640, 0, width);
+          let iy = map(h.keypoints[8].y, 0, 480, 0, height);
+          checkBtns(ix, iy);
+          drawSkeleton(h, gx, gy);
+          drawTips(h, gx, gy);
+          drawDial(h, gx, gy);
+          drawCursor(ix, iy);
         }
-
-        // 双手チャクラ連結（螺旋チェーン）
-        if (hands.length === 2) {
-          let d = dist(
-            map(hands[0].keypoints[9].x, 0, 640, 0, width),
-            map(hands[0].keypoints[9].y, 0, 480, 0, height),
-            map(hands[1].keypoints[9].x, 0, 640, 0, width),
-            map(hands[1].keypoints[9].y, 0, 480, 0, height)
-          );
-          let prox = map(d, 100, 800, 1, 0, true);
-          drawChakraLink(hands[0], hands[1], prox, gx, gy);
-          linkOsc.amp(map(prox, 0, 1, 0.03, 0.4), 0.1);
-          linkOsc.freq(60 + prox * 120);
-          linkOsc.start();
-        } else {
-          linkOsc.amp(0, 0.5);
-        }
+        if (hands.length === 2) drawLink(gx, gy);
       } else {
-        linkOsc.amp(0, 0.5);
-        drawNinjaScanning();
+        // 無手：文字のみ
+        fill(mc[0], mc[1], mc[2], 60 + sin(frameCount * 5) * 40);
+        noStroke(); textAlign(CENTER, CENTER); textSize(13);
+        text('チャクラ感知中 . . .', width / 2, height / 2);
       }
 
-      drawNinjaButtons(gx, gy);
+      drawBtns(gx, gy);
       drawHUD();
     }
 
-    // ── 查克拉走查線 ──
-    function drawChakraScan() {
-      let y = (frameCount * 2) % height;
-      let mc = modes[modeIdx].col;
-      stroke(mc[0], mc[1], mc[2], 18);
-      strokeWeight(1);
-      line(0, y, width, y);
-    }
-
-    // ── チャクラ骨格（脈絡网络）──
-    function drawChakraSkeleton(hand, gx, gy) {
-      let mc = modes[modeIdx].col;
-      let connections = handPose.getConnections();
-      for (let c of connections) {
-        let a = hand.keypoints[c[0]], b = hand.keypoints[c[1]];
-        let ax = map(a.x, 0, 640, 0, width) + gx;
-        let ay = map(a.y, 0, 480, 0, height) + gy;
-        let bx = map(b.x, 0, 640, 0, width) + gx;
-        let by = map(b.y, 0, 480, 0, height) + gy;
-
-        // 多層発光ライン
-        strokeWeight(4); stroke(mc[0], mc[1], mc[2], 25);
-        line(ax, ay, bx, by);
-        strokeWeight(2); stroke(mc[0], mc[1], mc[2], 80);
-        line(ax, ay, bx, by);
-        strokeWeight(1); stroke(255, 200, 100, 120);
-        line(ax, ay, bx, by);
+    // ── 骨格（1層のみ → 軽い）──
+    function drawSkeleton(h, gx, gy) {
+      let mc = MODES[modeIdx].c;
+      let conns = handPose.getConnections();
+      stroke(mc[0], mc[1], mc[2], 120);
+      strokeWeight(1.5);
+      for (let c of conns) {
+        let a = h.keypoints[c[0]], b = h.keypoints[c[1]];
+        line(map(a.x, 0, 640, 0, width) + gx, map(a.y, 0, 480, 0, height) + gy,
+          map(b.x, 0, 640, 0, width) + gx, map(b.y, 0, 480, 0, height) + gy);
       }
     }
 
-    // ── 指先エフェクト（親指=螺旋丸 / 他=チャクラ点）──
-    function drawFingertips(hand, gx, gy) {
-      let mc = modes[modeIdx].col;
-      let mc2 = modes[modeIdx].col2;
-
-      [4, 8, 12, 16, 20].forEach((idx, fi) => {
-        let k = hand.keypoints[idx];
-        let x = map(k.x, 0, 640, 0, width) + gx;
-        let y = map(k.y, 0, 480, 0, height) + gy;
-
-        if (idx === 4) {
-          // 親指：螺旋丸 mini
-          drawRasenganMini(x, y);
-        } else {
-          // チャクラ点（外圏 + 内圏）
+    // ── 指先：食指=螺旋丸，其他=單圈 ──
+    function drawTips(h, gx, gy) {
+      let mc = MODES[modeIdx].c;
+      let mc2 = MODES[modeIdx].c2;
+      [4, 8, 12, 16, 20].forEach(idx => {
+        let k = h.keypoints[idx];
+        let x = map(k.x, 0, 640, 0, width) + gx, y = map(k.y, 0, 480, 0, height) + gy;
+        if (idx === 8) {
+          // 食指：螺旋丸（二層弧のみ）
           noFill();
-          stroke(mc[0], mc[1], mc[2], 80); strokeWeight(3); circle(x, y, 22);
-          stroke(mc2[0], mc2[1], mc2[2], 160); strokeWeight(1.5); circle(x, y, 12);
-          fill(mc2[0], mc2[1], mc2[2], 200); noStroke(); circle(x, y, 4);
-
-          // 粒子スポーン（間欠）
-          if (frameCount % 8 === fi) {
-            frameParticles.push(new Particle(x, y, mc));
-          }
+          stroke(mc[0], mc[1], mc[2], 180); strokeWeight(1.5);
+          arc(x, y, 26, 26, frameCount * 5, frameCount * 5 + 260);
+          stroke(mc2[0], mc2[1], mc2[2], 220); strokeWeight(1);
+          arc(x, y, 14, 14, frameCount * 5 + 180, frameCount * 5 + 350);
+          fill(mc2[0], mc2[1], mc2[2], 230); noStroke();
+          circle(x, y, 4);
+        } else {
+          // 其他指：外圈 + 點
+          noFill();
+          stroke(mc[0], mc[1], mc[2], 140); strokeWeight(1.5);
+          circle(x, y, 16);
+          fill(mc2[0], mc2[1], mc2[2], 200); noStroke();
+          circle(x, y, 4);
         }
       });
     }
 
-    // ── 螺旋丸カーソル（食指追踪）──
-    function drawRasenganCursor(tx, ty) {
-      let mc = modes[modeIdx].col;
-      let mc2 = modes[modeIdx].col2;
-      let t = frameCount;
-
-      noFill();
-      // 外層旋轉環
-      for (let r = 24; r >= 8; r -= 8) {
-        let alpha = map(r, 8, 24, 220, 60);
-        stroke(mc[0], mc[1], mc[2], alpha);
-        strokeWeight(1.5);
-        arc(tx, ty, r * 2, r * 2, t * 4, t * 4 + 270);
-        arc(tx, ty, r * 2, r * 2, t * 4 + 180, t * 4 + 360);
-      }
-      // 核心
-      fill(mc2[0], mc2[1], mc2[2], 220);
-      noStroke();
-      circle(tx, ty, 6);
-
-      // 小型衛星
-      for (let s = 0; s < 3; s++) {
-        let ang = t * 6 + s * 120;
-        let sx = tx + 18 * cos(ang);
-        let sy = ty + 18 * sin(ang);
-        fill(mc[0], mc[1], mc[2], 180);
-        circle(sx, sy, 3);
-      }
-    }
-
-    // ── 螺旋丸 mini（親指）──
-    function drawRasenganMini(x, y) {
-      let mc = modes[modeIdx].col;
-      let mc2 = modes[modeIdx].col2;
-      let t = frameCount;
-      noFill();
-      for (let r = 14; r >= 5; r -= 4) {
-        let alpha = map(r, 5, 14, 200, 50);
-        stroke(mc[0], mc[1], mc[2], alpha); strokeWeight(1.2);
-        arc(x, y, r * 2, r * 2, t * 5, t * 5 + 240);
-      }
-      fill(255, 255, 200, 200); noStroke(); circle(x, y, 4);
-    }
-
-    // ── 写輪眼ダイアル（手首）──
-    function drawSharinganDial(hand, id, gx, gy) {
-      let wrist = hand.keypoints[0];
-      let middle = hand.keypoints[9];
-      let tx = map(wrist.x, 0, 640, 0, width);
-      let ty = map(wrist.y, 0, 480, 0, height);
-      let angle = atan2(middle.y - wrist.y, middle.x - wrist.x) + 90;
-
-      smoothedAngle[id] = lerp(smoothedAngle[id] || 0, angle, 0.15);
-      smoothedPos[id].x = lerp(smoothedPos[id].x || tx, tx, 0.2);
-      smoothedPos[id].y = lerp(smoothedPos[id].y || ty, ty, 0.2);
-
-      if (abs(smoothedAngle[id] - lastTickAngle[id]) >= 15) {
-        playTone(900 + modeIdx * 200);
-        lastTickAngle[id] = smoothedAngle[id];
-      }
-
-      let cx = smoothedPos[id].x + gx;
-      let cy = smoothedPos[id].y + gy;
+    // ── 写輪眼ダイアル（手首、軽量版）──
+    function drawDial(h, gx, gy) {
+      let mc = MODES[modeIdx].c;
+      let wrist = h.keypoints[0];
+      let middle = h.keypoints[9];
+      // 手のインデックスを id として smPos/smAngle に入れるが、
+      // 単純化のためループ内で手ごとに固定 idx=0 で管理
+      let id = 0;
+      let tx = map(wrist.x, 0, 640, 0, width), ty = map(wrist.y, 0, 480, 0, height);
+      let ang = atan2(middle.y - wrist.y, middle.x - wrist.x) + 90;
+      smAngle[id] = lerp(smAngle[id] || 0, ang, 0.15);
+      smPos[id].x = lerp(smPos[id].x || tx, tx, 0.2);
+      smPos[id].y = lerp(smPos[id].y || ty, ty, 0.2);
+      let cx = smPos[id].x + gx, cy = smPos[id].y + gy;
 
       push();
       translate(cx, cy);
-      rotate(smoothedAngle[id]);
+      rotate(smAngle[id]);
 
-      // 写輪眼 外圏
-      noFill();
-      stroke(...SHARINGAN_RED, 180); strokeWeight(2);
-      circle(0, 0, 100);
-      stroke(...SHARINGAN_RED, 80); strokeWeight(1);
-      circle(0, 0, 115);
+      // 外圏
+      noFill(); stroke(180, 0, 0, 160); strokeWeight(1.5);
+      circle(0, 0, 90);
 
-      // 三勾玉（マゴタマ）
+      // 三勾玉
       for (let m = 0; m < 3; m++) {
         push();
-        rotate(m * 120 + frameCount * 1.5);
-        fill(...SHARINGAN_RED, 200); noStroke();
-        ellipse(32, 0, 14, 10);
-        fill(13, 6, 0, 255); circle(32, 0, 6);
+        rotate(m * 120 + frameCount * 2);
+        fill(200, 0, 0, 180); noStroke();
+        ellipse(28, 0, 12, 8);
+        fill(13, 6, 0); circle(28, 0, 5);
         pop();
       }
 
-      // 中央：瞳孔
-      fill(20, 0, 0, 230); stroke(...SHARINGAN_RED, 200); strokeWeight(1);
-      circle(0, 0, 30);
-      fill(0); noStroke(); circle(0, 0, 14);
+      // 瞳孔
+      fill(16, 0, 0, 220); stroke(180, 0, 0, 160); strokeWeight(1);
+      circle(0, 0, 26);
+      fill(0); noStroke(); circle(0, 0, 12);
 
-      // 目盛り
-      for (let i = 0; i < 12; i++) {
-        rotate(30);
-        stroke(200, 60, 60, 100); strokeWeight(1);
-        line(44, 0, 52, 0);
-      }
-
-      // 針（橘）
-      fill(...NARUTO_ORANGE, 220); noStroke();
-      triangle(58, 0, 48, -5, 48, 5);
+      // 針
+      fill(mc[0], mc[1], mc[2], 200); noStroke();
+      triangle(52, 0, 42, -4, 42, 4);
       pop();
 
-      // 角度テキスト
-      fill(...GOLD, 180); noStroke();
-      textAlign(CENTER, CENTER); textSize(12);
-      text(`${int(smoothedAngle[id])}°`, cx, cy);
+      // 角度
+      fill(255, 200, 60, 160); noStroke();
+      textAlign(CENTER, CENTER); textSize(11);
+      text(int(smAngle[id]) + '°', cx, cy);
     }
 
-    // ── 双手チャクラ連鎖（螺旋波動拳）──
-    function drawChakraLink(h1, h2, k, gx, gy) {
-      let p1x = map(h1.keypoints[9].x, 0, 640, 0, width) + gx;
-      let p1y = map(h1.keypoints[9].y, 0, 480, 0, height) + gy;
-      let p2x = map(h2.keypoints[9].x, 0, 640, 0, width) + gx;
-      let p2y = map(h2.keypoints[9].y, 0, 480, 0, height) + gy;
-
-      let mc = modes[modeIdx].col;
-      let linkCol = lerpColor(color(...mc), color(...KYUUBI_RED), k);
-
-      // 螺旋エネルギーライン
-      for (let layer = 0; layer < 3; layer++) {
-        strokeWeight(1 + k * 8 - layer * 2);
-        stroke(red(linkCol), green(linkCol), blue(linkCol), 60 + layer * 30);
-        beginShape(); noFill();
-        for (let t = 0; t <= 1; t += 0.04) {
-          let nx = lerp(p1x, p2x, t) + sin(t * 360 * 2 + frameCount * 4 + layer * 120) * k * 18;
-          let ny = lerp(p1y, p2y, t) + cos(t * 360 * 2 + frameCount * 4 + layer * 120) * k * 18;
-          vertex(nx, ny);
-        }
-        endShape();
+    // ── 螺旋丸カーソル（食指追踪）──
+    function drawCursor(tx, ty) {
+      let mc = MODES[modeIdx].c;
+      let mc2 = MODES[modeIdx].c2;
+      let t = frameCount;
+      noFill();
+      // 外旋
+      stroke(mc[0], mc[1], mc[2], 160); strokeWeight(2);
+      arc(tx, ty, 36, 36, t * 4, t * 4 + 260);
+      // 内旋
+      stroke(mc2[0], mc2[1], mc2[2], 200); strokeWeight(1.5);
+      arc(tx, ty, 20, 20, t * 4 + 180, t * 4 + 340);
+      // 核
+      fill(mc2[0], mc2[1], mc2[2], 220); noStroke();
+      circle(tx, ty, 5);
+      // 衛星×2
+      for (let s = 0; s < 2; s++) {
+        let a = t * 7 + s * 180;
+        fill(mc[0], mc[1], mc[2], 160);
+        circle(tx + 15 * cos(a), ty + 15 * sin(a), 3);
       }
-
-      // 中心衝突点
-      let mx = (p1x + p2x) / 2, my = (p1y + p2y) / 2;
-      let pulse = sin(frameCount * 8) * 10;
-      fill(255, 200, 100, 80 * k); noStroke();
-      circle(mx, my, 20 + k * 40 + pulse);
-      fill(255, 255, 200, 160 * k);
-      circle(mx, my, 8 + k * 10);
     }
 
-    // ── ボタン（忍術印）──
-    function checkButtons(x, y) {
-      buttons.forEach(btn => {
-        let inside = x > btn.x && x < btn.x + btn.w && y > btn.y && y < btn.y + btn.h;
-        if (inside && !btn.active) {
-          btn.active = true;
-          if (btn.kanji === 'CHAKRA') {
-            modeIdx = (modeIdx + 1) % modes.length;
-            playTone(800 + modeIdx * 150);
-          } else if (btn.kanji === 'JUTSU') {
-            glitchTimer = 30;
-            playTone(180); playTone(80);
-            for (let p = 0; p < 20; p++) {
-              frameParticles.push(new Particle(x, y, modes[modeIdx].col));
-            }
-          }
-        } else if (!inside) { btn.active = false; }
+    // ── チャクラ連鎖（双手）──
+    function drawLink(gx, gy) {
+      let mc = MODES[modeIdx].c;
+      let p1x = map(hands[0].keypoints[9].x, 0, 640, 0, width) + gx;
+      let p1y = map(hands[0].keypoints[9].y, 0, 480, 0, height) + gy;
+      let p2x = map(hands[1].keypoints[9].x, 0, 640, 0, width) + gx;
+      let p2y = map(hands[1].keypoints[9].y, 0, 480, 0, height) + gy;
+      let d = dist(p1x, p1y, p2x, p2y);
+      let k = map(d, 80, 700, 1, 0, true);
+
+      stroke(mc[0], mc[1], mc[2], 80 + k * 100);
+      strokeWeight(1 + k * 6);
+      beginShape(); noFill();
+      for (let t = 0; t <= 1; t += 0.06) {
+        vertex(lerp(p1x, p2x, t) + sin(t * 360 + frameCount * 5) * k * 14,
+          lerp(p1y, p2y, t) + cos(t * 360 + frameCount * 5) * k * 14);
+      }
+      endShape();
+
+      // 中心光点
+      let mx = (p1x + p2x) / 2, my = (p1y + p2y) / 2;
+      fill(255, 200, 100, 60 * k); noStroke();
+      circle(mx, my, 14 + k * 30);
+    }
+
+    // ── ボタン ──
+    function checkBtns(x, y) {
+      btns.forEach(b => {
+        let inside = x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h;
+        if (inside && !b.on) {
+          b.on = true;
+          if (b.tag === 'MODE') modeIdx = (modeIdx + 1) % MODES.length;
+          else if (b.tag === 'JUTSU') glitch = 25;
+        } else if (!inside) b.on = false;
       });
     }
 
-    function drawNinjaButtons(gx, gy) {
-      let mc = modes[modeIdx].col;
-      buttons.forEach(btn => {
+    function drawBtns(gx, gy) {
+      let mc = MODES[modeIdx].c;
+      btns.forEach(b => {
         push();
-        translate(btn.x + gx / 3, btn.y + gy / 3);
-        noFill();
-        stroke(mc[0], mc[1], mc[2], btn.active ? 255 : 150);
-        strokeWeight(btn.active ? 2 : 1);
-        rect(0, 0, btn.w, btn.h, 4);
-
-        if (btn.active) {
-          fill(mc[0], mc[1], mc[2], 60);
-          rect(0, 0, btn.w, btn.h, 4);
-        }
-
-        // ボタンラベル（日本語）
-        fill(btn.active ? color(255, 240, 200) : color(...mc));
-        noStroke();
-        textAlign(CENTER, CENTER);
-        textSize(12);
-        text(btn.label, btn.w / 2, btn.h / 2);
+        translate(b.x + gx / 4, b.y + gy / 4);
+        noFill(); stroke(mc[0], mc[1], mc[2], b.on ? 255 : 130); strokeWeight(b.on ? 2 : 1);
+        rect(0, 0, b.w, b.h, 4);
+        if (b.on) { fill(mc[0], mc[1], mc[2], 50); rect(0, 0, b.w, b.h, 4); }
+        fill(b.on ? color(255, 240, 200) : color(mc[0], mc[1], mc[2]));
+        noStroke(); textAlign(CENTER, CENTER); textSize(12);
+        text(b.lbl, b.w / 2, b.h / 2);
         pop();
       });
     }
 
-    // ── 右上モード表示 ──
     function drawHUD() {
-      let mc = modes[modeIdx].col;
-      let mc2 = modes[modeIdx].col2;
-      let modeName = modes[modeIdx].name;
-
-      fill(mc[0], mc[1], mc[2], 180);
-      noStroke();
-      textAlign(RIGHT, TOP);
-      textSize(16);
-      text(modeName + ' MODE', width - 30, 20);
-      textSize(10);
-      fill(mc2[0], mc2[1], mc2[2], 120);
-      text('チャクラ型: ' + modeName, width - 30, 42);
-
-      // 下部ラベル
-      fill(mc[0], mc[1], mc[2], 100);
-      textAlign(CENTER, BOTTOM);
-      textSize(11);
-      text('忍術・チャクラ感知システム | M11321008', width / 2, height - 10);
-    }
-
-    // ── スキャン（手なし時）──
-    function drawNinjaScanning() {
-      let mc = modes[modeIdx].col;
-      let y = (frameCount * 3) % height;
-      stroke(mc[0], mc[1], mc[2], 35);
-      strokeWeight(1.5);
-      line(0, y, width, y);
-
-      // スキャン文字
-      fill(mc[0], mc[1], mc[2], 80 + sin(frameCount * 5) * 50);
-      noStroke();
-      textAlign(CENTER, CENTER);
-      textSize(14);
-      text('チャクラ感知中 . . .', width / 2, height / 2);
-      textSize(10);
-      fill(mc[0], mc[1], mc[2], 50);
-      text('手を前に出せ', width / 2, height / 2 + 24);
+      let mc = MODES[modeIdx].c;
+      let mc2 = MODES[modeIdx].c2;
+      // 右上モード
+      fill(mc[0], mc[1], mc[2], 170); noStroke();
+      textAlign(RIGHT, TOP); textSize(15);
+      text(MODES[modeIdx].name + ' MODE', width - 28, 18);
+      textSize(9); fill(mc2[0], mc2[1], mc2[2], 110);
+      text('チャクラ型: ' + MODES[modeIdx].name, width - 28, 38);
+      // 下部
+      fill(mc[0], mc[1], mc[2], 90);
+      textAlign(CENTER, BOTTOM); textSize(10);
+      text('忍術・チャクラ感知 | M11321008', width / 2, height - 8);
     }
 
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
