@@ -1,0 +1,392 @@
+{
+  "name": "SimpleChatb",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=你是一個聰明貼心的個人 AI 助理，請依據你收到的資訊來回覆訊息，回覆時請參考以下要點：\n- 使用繁體中文來回達訊息。\n- 你可以查詢我的行程\n- 需要的時候請用serpAPI這個tool去上網搜尋\n- 現在的時間是：{{ $now }}\n- 回覆時可以使用換行符號讓內容更清晰\n- 回覆時請刪除 '您好！根據查詢到的資訊'\n- 如果我請你處理任何行程的功能，請使用 Google Calendar Tool 來處理\n- 如果我請你新增行程，但沒有提供行程的結束時間，則行程預設時長設為1小時\n- 如果我請你修改行程，請先使用 Google Calendar Tool 取得該行程的原始資訊，然後再去修改該行程的內容\n- 當回覆行程相關資訊時，請使用如下格式：\n  * 用 **標題** 來標記重要信息\n  * 用列表形式展示多個項目\n  * 用換行分隔不同的部分\n  * 用 📅 📍 ⏰ 🔗 等emoji來增加視覺效果"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1032,
+        336
+      ],
+      "maxIterations": 15,
+      "maxExecutionTime": 120,
+      "verbose": true,
+      "id": "d5b96ba7-3090-4e4c-bd6f-a9da94a6e062",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        848,
+        560
+      ],
+      "id": "8e66bbb8-92f1-4eeb-8b0a-168fe07767ac",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        976,
+        560
+      ],
+      "id": "5de562ed-2b5d-4942-b6f5-80081988bdce",
+      "name": "SerpAPI",
+      "credentials": {
+        "serpApi": {
+          "id": "cDy2oRJPpYg1ZOXi",
+          "name": "538-Free"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 準備推送數據\nconst webhookData = $('Webhook1').first().json;\n\n// 生成 session ID 如果沒有提供\nlet sessionId = webhookData.body.sessionId;\nif (!sessionId) {\n  sessionId = 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);\n}\n\nreturn {\n  chatInput: webhookData.body.message || webhookData.body.text || '',\n  sessionId: sessionId,\n  userId: sessionId, // 使用 sessionId 作為 userId\n  timestamp: webhookData.body.timestamp || new Date().toISOString(),\n  clientInfo: {\n    userAgent: webhookData.headers['user-agent'] || '',\n    ip: webhookData.headers['x-forwarded-for'] || webhookData.headers['x-real-ip'] || ''\n  }\n};"
+      },
+      "id": "351ad4c1-0a9b-451c-9200-e46ac28d33bf",
+      "name": "Prepare Chat Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 處理 AI 回應並準備回傳 - 支持HTML格式化和正確的URL處理\nconst agentResponse = $('AI Agent').first().json;\nconst prepareData = $('Prepare Chat Data').first().json;\n\n// 嘗試從不同可能的回應欄位獲取文字\nlet responseText = agentResponse.text || \n                  agentResponse.output || \n                  agentResponse.response ||\n                  agentResponse.content ||\n                  '抱歉，我現在無法處理您的請求，請稍後再試。';\n\n// 移除不需要的前綴（如系統提示的要求）\nresponseText = responseText.replace(/^您好！根據查詢到的資訊[，。:]?\\s*/i, '');\n\n// 改進的URL提取和轉換\n// 使用更精確的正則表達式，排除URL後面的括號、句號等標點符號\nconst improvedUrlPattern = /https?:\\/\\/[^\\s\\)\\]\\}。，；：\\n]+(?=[\\s\\)\\]\\}。，；：\\n]|$)/g;\nlet htmlContent = responseText;\n\n// 提取所有有效的URL\nconst urlMatches = responseText.match(improvedUrlPattern) || [];\nconst validUrls = new Set();\n\nurlMatches.forEach(url => {\n  // 清理URL末尾的標點符號\n  let cleanUrl = url.replace(/[.,;:!?\"'\\-]+$/, '');\n  \n  // 驗證URL格式\n  try {\n    new URL(cleanUrl);\n    validUrls.add(cleanUrl);\n  } catch (e) {\n    console.log('Invalid URL detected:', cleanUrl);\n  }\n});\n\n// 替換URL為HTML連結\nhtmlContent = responseText;\nvalidUrls.forEach(url => {\n  // 建立一個更精確的替換模式\n  const escapedUrl = url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const urlRegex = new RegExp(escapedUrl, 'g');\n  htmlContent = htmlContent.replace(urlRegex, \n    `<a href=\"${url}\" target=\"_blank\" style=\"color: #3b82f6; text-decoration: underline; word-break: break-all;\">${url}</a>`);\n});\n\n// 轉換Markdown格式為HTML\nlet finalHtml = htmlContent\n  // 保留換行\n  .split('\\n')\n  .map(line => {\n    // 粗體: **text** -> <strong>text</strong>\n    line = line.replace(/\\*\\*(.+?)\\*\\*/g, '<strong style=\"color: #0284c7; font-weight: 600;\">$1</strong>');\n    \n    // 傾斜: *text* -> <em>text</em> (但要避免與URL中的*衝突)\n    line = line.replace(/(?<!:\\/\\/)\\*([^*\\n]+)\\*(?!\\/\\/)/g, '<em style=\"color: #666;\">$1</em>');\n    \n    // 代碼: `text` -> <code>text</code>\n    line = line.replace(/`([^`]+)`/g, '<code style=\"background: #f0f9ff; padding: 2px 6px; border-radius: 4px; color: #0369a1; font-family: monospace; font-size: 12px;\">$1</code>');\n    \n    // 清理開頭的星號和列表項\n    if (line.trim().startsWith('*')) {\n      line = '<li style=\"margin-left: 20px; margin-bottom: 8px;\">' + line.replace(/^\\*\\s*/, '') + '</li>';\n    }\n    \n    return line.trim() ? line : '';\n  })\n  .filter(line => line)\n  .join('<br/>');\n\n// 包裝列表項\nif (finalHtml.includes('<li')) {\n  finalHtml = finalHtml.replace(/(<li[^>]*>.+?<\\/li>)/gs, '<ul style=\"list-style: none; padding: 0;\">$1</ul>');\n  finalHtml = finalHtml.replace(/<\\/ul>\\s*<ul[^>]*>/g, '');\n}\n\n// 如果回應為空，提供預設回應\nif (!finalHtml || finalHtml.trim() === '') {\n  finalHtml = '很抱歉，我現在無法正確理解您的問題。請您換個方式提問，我會盡力為您解答！';\n}\n\nconsole.log('AI Agent 原始回應:', agentResponse);\nconsole.log('提取的有效URL:', Array.from(validUrls));\nconsole.log('HTML格式化後:', finalHtml);\n\nreturn {\n  success: true,\n  message: finalHtml,\n  plainText: responseText,\n  sessionId: prepareData.sessionId,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "0865530c-4636-4964-bdbd-0f2cb293009a",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "7273b7f0-0b66-496e-a7f2-1a8518187df6",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "jimmy00538538@gmail.com",
+          "mode": "list",
+          "cachedResultName": "jimmy00538538@gmail.com"
+        },
+        "limit": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Limit', ``, 'number') }}",
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        560
+      ],
+      "id": "7ff97444-eb0d-4640-b4af-d1c8d8dfa8c0",
+      "name": "Get events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "knjpGVWr2y9DglYr",
+          "name": "538538-GoogleAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "jimmy00538538@gmail.com",
+          "mode": "list",
+          "cachedResultName": "jimmy00538538@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "useDefaultReminders": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Use_Default_Reminders', ``, 'boolean') }}",
+        "additionalFields": {
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1232,
+        560
+      ],
+      "id": "1d8f8ebd-4ee9-4961-8e79-8080b4ba1912",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "knjpGVWr2y9DglYr",
+          "name": "538-GoogleAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "jimmy00538538@gmail.com",
+          "mode": "list",
+          "cachedResultName": "jimmy00538538@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1360,
+        560
+      ],
+      "id": "18cb54da-9952-45f0-aa7b-18d1c537d154",
+      "name": "Delete an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "knjpGVWr2y9DglYr",
+          "name": "538-GoogleAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "jimmy00538538@gmail.com",
+          "mode": "list",
+          "cachedResultName": "jimmy00538538@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "useDefaultReminders": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Use_Default_Reminders', ``, 'boolean') }}",
+        "updateFields": {
+          "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        560
+      ],
+      "id": "30550f96-b466-43e9-ab10-86cacbce7714",
+      "name": "Update an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "knjpGVWr2y9DglYr",
+          "name": "538-GoogleAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatb",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        272,
+        336
+      ],
+      "id": "ac248a0d-f141-4307-b310-9cbfa05d1538",
+      "name": "Webhook1",
+      "webhookId": "9557b7f9-5011-4617-889c-6829691e4873"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        720,
+        560
+      ],
+      "id": "8e86ee62-ad89-4805-948e-857dbcf9b16f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBbYvRuWYowrIbaq",
+          "name": "538-練習版"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Chat Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get events": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Chat Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e3996d36-bea5-4a49-919d-50c8301bd91e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "307f1f370e1cf2d79dfa24e989edfdbe19b70a9ab0641b9e4f572093720ac866"
+  },
+  "id": "PCbMxz3u0FC462qXT1Zkt",
+  "tags": []
+}
